@@ -1,7 +1,7 @@
-﻿# --- 系统 & 临时文件 ---
+# --- 系统 & 临时文件 ---
 Thumbs.db
 Desktop.ini
-.BIN/
+$RECYCLE.BIN/
 *.tmp
 *.temp
 ~$*
@@ -25,3 +25,7 @@ node_modules/
 
 # --- 项目特定 ---
 01_全局复盘_踩坑日志.md
+
+# --- 工具 & 配置 ---
+.tools/
+.gh-config/
