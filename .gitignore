@@ -29,3 +29,5 @@ node_modules/
 # --- 工具 & 配置 ---
 .tools/
 .gh-config/
+
+.git-credentials
