@@ -1,0 +1,676 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>星际漂移</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #10131f;
+      --panel: rgba(16, 19, 31, 0.76);
+      --line: rgba(255, 255, 255, 0.16);
+      --text: #f6f0dc;
+      --muted: #aab7c8;
+      --gold: #ffd166;
+      --teal: #39d6c7;
+      --red: #ff5c7a;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+    }
+
+    .shell {
+      position: relative;
+      width: min(100vw, 1120px);
+      height: min(100vh, 720px);
+      min-height: 520px;
+      background:
+        radial-gradient(circle at 18% 14%, rgba(57, 214, 199, 0.18), transparent 34%),
+        radial-gradient(circle at 80% 26%, rgba(255, 209, 102, 0.15), transparent 30%),
+        linear-gradient(180deg, #141827 0%, #0c1020 62%, #171524 100%);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.48);
+      overflow: hidden;
+    }
+
+    canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    .hud {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .meters {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .meter {
+      min-width: 104px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      backdrop-filter: blur(14px);
+    }
+
+    .label {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.1;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .value {
+      display: block;
+      margin-top: 4px;
+      font-weight: 800;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .pause {
+      width: 42px;
+      height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--text);
+      font-size: 17px;
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    .pause:focus-visible,
+    .primary:focus-visible {
+      outline: 3px solid rgba(57, 214, 199, 0.42);
+      outline-offset: 2px;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgba(8, 10, 18, 0.5);
+      backdrop-filter: blur(5px);
+      transition: opacity 180ms ease;
+    }
+
+    .overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .dialog {
+      width: min(420px, calc(100vw - 32px));
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(14, 18, 32, 0.9);
+      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.5);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(34px, 6vw, 58px);
+      line-height: 0.92;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.55;
+    }
+
+    .keys {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 18px 0;
+    }
+
+    .key {
+      min-height: 42px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .primary {
+      width: 100%;
+      min-height: 46px;
+      border: 0;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--gold), #ff8f70);
+      color: #201515;
+      font-weight: 900;
+      font-size: 15px;
+      cursor: pointer;
+    }
+
+    .toast {
+      position: absolute;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%);
+      color: rgba(246, 240, 220, 0.78);
+      font-size: 13px;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    @media (max-width: 680px) {
+      .shell {
+        width: 100vw;
+        height: 100vh;
+        min-height: 100vh;
+        border: 0;
+      }
+
+      .hud {
+        top: 10px;
+        left: 10px;
+        right: 10px;
+      }
+
+      .meter {
+        min-width: 86px;
+        padding: 8px 10px;
+      }
+
+      .value {
+        font-size: 19px;
+      }
+
+      .pause {
+        width: 38px;
+        height: 38px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell" aria-label="星际漂移小游戏">
+    <canvas id="game"></canvas>
+    <section class="hud" aria-label="游戏状态">
+      <div class="meters">
+        <div class="meter">
+          <span class="label">得分</span>
+          <span class="value" id="score">0</span>
+        </div>
+        <div class="meter">
+          <span class="label">最佳</span>
+          <span class="value" id="best">0</span>
+        </div>
+        <div class="meter">
+          <span class="label">护盾</span>
+          <span class="value" id="shield">3</span>
+        </div>
+      </div>
+      <button class="pause" id="pause" type="button" aria-label="暂停或继续" title="暂停或继续">II</button>
+    </section>
+
+    <section class="overlay" id="overlay">
+      <div class="dialog">
+        <h1>星际漂移</h1>
+        <p id="message">穿过流星带，收集金色星核，尽量守住护盾。</p>
+        <div class="keys" aria-hidden="true">
+          <div class="key">WASD</div>
+          <div class="key">方向键</div>
+          <div class="key">触摸</div>
+        </div>
+        <button class="primary" id="start" type="button">开始游戏</button>
+      </div>
+    </section>
+
+    <div class="toast">支持键盘、鼠标或触摸操作，空格键暂停。</div>
+  </main>
+
+  <script>
+    const canvas = document.querySelector("#game");
+    const ctx = canvas.getContext("2d");
+    const scoreEl = document.querySelector("#score");
+    const bestEl = document.querySelector("#best");
+    const shieldEl = document.querySelector("#shield");
+    const overlay = document.querySelector("#overlay");
+    const startButton = document.querySelector("#start");
+    const pauseButton = document.querySelector("#pause");
+    const message = document.querySelector("#message");
+
+    const state = {
+      width: 0,
+      height: 0,
+      dpr: 1,
+      running: false,
+      paused: false,
+      over: false,
+      score: 0,
+      best: Number(localStorage.getItem("star-drift-best") || 0),
+      shield: 3,
+      time: 0,
+      spawnTimer: 0,
+      coreTimer: 0,
+      last: 0,
+      shake: 0,
+      player: { x: 180, y: 260, vx: 0, vy: 0, r: 17 },
+      meteors: [],
+      cores: [],
+      sparks: [],
+      stars: [],
+      keys: new Set(),
+      pointer: null
+    };
+
+    bestEl.textContent = state.best;
+
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
+      state.dpr = Math.min(window.devicePixelRatio || 1, 2);
+      state.width = rect.width;
+      state.height = rect.height;
+      canvas.width = Math.floor(rect.width * state.dpr);
+      canvas.height = Math.floor(rect.height * state.dpr);
+      ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+      buildStarfield();
+      state.player.x = Math.min(state.player.x, state.width - 50);
+      state.player.y = Math.min(state.player.y, state.height - 50);
+    }
+
+    function buildStarfield() {
+      state.stars = Array.from({ length: Math.floor(state.width * state.height / 8500) }, () => ({
+        x: Math.random() * state.width,
+        y: Math.random() * state.height,
+        z: 0.35 + Math.random() * 1.3,
+        twinkle: Math.random() * Math.PI * 2
+      }));
+    }
+
+    function reset() {
+      state.running = true;
+      state.paused = false;
+      state.over = false;
+      state.score = 0;
+      state.shield = 3;
+      state.time = 0;
+      state.spawnTimer = 0;
+      state.coreTimer = 1.2;
+      state.shake = 0;
+      state.player = { x: state.width * 0.24, y: state.height * 0.5, vx: 0, vy: 0, r: 17 };
+      state.meteors = [];
+      state.cores = [];
+      state.sparks = [];
+      overlay.classList.add("hidden");
+      pauseButton.textContent = "II";
+      updateHud();
+    }
+
+    function updateHud() {
+      scoreEl.textContent = Math.floor(state.score);
+      bestEl.textContent = state.best;
+      shieldEl.textContent = state.shield;
+    }
+
+    function spawnMeteor() {
+      const size = 17 + Math.random() * 34;
+      const speed = 160 + Math.min(260, state.time * 8) + Math.random() * 90;
+      state.meteors.push({
+        x: state.width + size,
+        y: size + Math.random() * (state.height - size * 2),
+        r: size,
+        vx: -speed,
+        spin: Math.random() * 6,
+        rot: Math.random() * Math.PI * 2,
+        wobble: Math.random() * Math.PI * 2
+      });
+    }
+
+    function spawnCore() {
+      state.cores.push({
+        x: state.width + 30,
+        y: 40 + Math.random() * (state.height - 80),
+        r: 10,
+        vx: -145 - Math.random() * 85,
+        pulse: Math.random() * Math.PI * 2
+      });
+    }
+
+    function burst(x, y, color, count = 16) {
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 35 + Math.random() * 180;
+        state.sparks.push({
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 0.35 + Math.random() * 0.45,
+          max: 0.8,
+          color
+        });
+      }
+    }
+
+    function hit(a, b) {
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      return Math.hypot(dx, dy) < a.r + b.r * 0.78;
+    }
+
+    function step(dt) {
+      if (!state.running || state.paused) return;
+      state.time += dt;
+      state.score += dt * (10 + state.time * 0.75);
+      state.spawnTimer -= dt;
+      state.coreTimer -= dt;
+      state.shake = Math.max(0, state.shake - dt * 18);
+
+      if (state.spawnTimer <= 0) {
+        spawnMeteor();
+        state.spawnTimer = Math.max(0.34, 1.05 - state.time * 0.018) + Math.random() * 0.32;
+      }
+
+      if (state.coreTimer <= 0) {
+        spawnCore();
+        state.coreTimer = 1.45 + Math.random() * 1.35;
+      }
+
+      const player = state.player;
+      let ax = 0;
+      let ay = 0;
+      if (state.keys.has("ArrowLeft") || state.keys.has("a")) ax -= 1;
+      if (state.keys.has("ArrowRight") || state.keys.has("d")) ax += 1;
+      if (state.keys.has("ArrowUp") || state.keys.has("w")) ay -= 1;
+      if (state.keys.has("ArrowDown") || state.keys.has("s")) ay += 1;
+
+      if (state.pointer) {
+        ax += (state.pointer.x - player.x) / 120;
+        ay += (state.pointer.y - player.y) / 120;
+      }
+
+      player.vx += ax * 720 * dt;
+      player.vy += ay * 720 * dt;
+      player.vx *= Math.pow(0.035, dt);
+      player.vy *= Math.pow(0.035, dt);
+      player.x = Math.max(28, Math.min(state.width - 28, player.x + player.vx * dt));
+      player.y = Math.max(34, Math.min(state.height - 28, player.y + player.vy * dt));
+
+      for (const meteor of state.meteors) {
+        meteor.x += meteor.vx * dt;
+        meteor.y += Math.sin(state.time * 2.2 + meteor.wobble) * 26 * dt;
+        meteor.rot += meteor.spin * dt;
+      }
+
+      for (const core of state.cores) {
+        core.x += core.vx * dt;
+        core.pulse += dt * 5;
+      }
+
+      for (const spark of state.sparks) {
+        spark.x += spark.vx * dt;
+        spark.y += spark.vy * dt;
+        spark.vx *= Math.pow(0.08, dt);
+        spark.vy *= Math.pow(0.08, dt);
+        spark.life -= dt;
+      }
+
+      state.meteors = state.meteors.filter(m => m.x > -m.r * 2);
+      state.cores = state.cores.filter(c => c.x > -40);
+      state.sparks = state.sparks.filter(s => s.life > 0);
+
+      for (let i = state.cores.length - 1; i >= 0; i--) {
+        if (hit(player, state.cores[i])) {
+          state.score += 75;
+          burst(state.cores[i].x, state.cores[i].y, "#ffd166", 24);
+          state.cores.splice(i, 1);
+        }
+      }
+
+      for (let i = state.meteors.length - 1; i >= 0; i--) {
+        if (hit(player, state.meteors[i])) {
+          state.shield -= 1;
+          state.shake = 9;
+          burst(player.x, player.y, "#ff5c7a", 30);
+          state.meteors.splice(i, 1);
+          if (state.shield <= 0) {
+            endGame();
+          }
+        }
+      }
+
+      updateHud();
+    }
+
+    function endGame() {
+      state.running = false;
+      state.over = true;
+      const final得分 = Math.floor(state.score);
+      if (final得分 > state.best) {
+        state.best = final得分;
+        localStorage.setItem("star-drift-best", String(state.best));
+      }
+      updateHud();
+      message.textContent = `Run complete. 得分 ${final得分}. 最佳 ${state.best}.`;
+      startButton.textContent = "再来一局";
+      overlay.classList.remove("hidden");
+    }
+
+    function drawShip(x, y) {
+      ctx.save();
+      ctx.translate(x, y);
+      const angle = Math.atan2(state.player.vy, 260 + Math.abs(state.player.vx)) * 0.45;
+      ctx.rotate(angle);
+      ctx.shadowColor = "rgba(57, 214, 199, 0.7)";
+      ctx.shadowBlur = 18;
+      ctx.fillStyle = "#39d6c7";
+      ctx.beginPath();
+      ctx.moveTo(24, 0);
+      ctx.lineTo(-15, -14);
+      ctx.lineTo(-9, 0);
+      ctx.lineTo(-15, 14);
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "#f6f0dc";
+      ctx.beginPath();
+      ctx.ellipse(2, 0, 8, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#ff7a5a";
+      ctx.beginPath();
+      ctx.moveTo(-13, -7);
+      ctx.lineTo(-28 - Math.random() * 10, 0);
+      ctx.lineTo(-13, 7);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawMeteor(meteor) {
+      ctx.save();
+      ctx.translate(meteor.x, meteor.y);
+      ctx.rotate(meteor.rot);
+      const grad = ctx.createRadialGradient(-meteor.r * 0.25, -meteor.r * 0.3, 2, 0, 0, meteor.r);
+      grad.addColorStop(0, "#b9a386");
+      grad.addColorStop(0.65, "#6f5c57");
+      grad.addColorStop(1, "#312b36");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * Math.PI * 2;
+        const rr = meteor.r * (0.74 + Math.sin(i * 2.1 + meteor.rot) * 0.12 + (i % 2) * 0.16);
+        ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawCore(core) {
+      const glow = 7 + Math.sin(core.pulse) * 3;
+      ctx.save();
+      ctx.translate(core.x, core.y);
+      ctx.shadowColor = "#ffd166";
+      ctx.shadowBlur = 18 + glow;
+      ctx.fillStyle = "#ffd166";
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const a = -Math.PI / 2 + i * Math.PI / 5;
+        const r = i % 2 ? core.r * 0.48 : core.r + glow * 0.2;
+        ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, state.width, state.height);
+      const shakeX = (Math.random() - 0.5) * state.shake;
+      const shakeY = (Math.random() - 0.5) * state.shake;
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+
+      for (const star of state.stars) {
+        star.x -= star.z * (state.running && !state.paused ? 0.7 : 0.18);
+        if (star.x < 0) {
+          star.x = state.width;
+          star.y = Math.random() * state.height;
+        }
+        const alpha = 0.35 + Math.sin(state.time * 2 + star.twinkle) * 0.18 + star.z * 0.2;
+        ctx.fillStyle = `rgba(246, 240, 220, ${alpha})`;
+        ctx.fillRect(star.x, star.y, star.z * 1.7, star.z * 1.7);
+      }
+
+      ctx.strokeStyle = "rgba(57, 214, 199, 0.1)";
+      ctx.lineWidth = 1;
+      for (let y = 80; y < state.height; y += 78) {
+        ctx.beginPath();
+        ctx.moveTo(0, y + Math.sin(state.time + y) * 10);
+        ctx.lineTo(state.width, y + Math.cos(state.time + y) * 10);
+        ctx.stroke();
+      }
+
+      state.cores.forEach(drawCore);
+      state.meteors.forEach(drawMeteor);
+      drawShip(state.player.x, state.player.y);
+
+      for (const spark of state.sparks) {
+        ctx.globalAlpha = Math.max(0, spark.life / spark.max);
+        ctx.fillStyle = spark.color;
+        ctx.beginPath();
+        ctx.arc(spark.x, spark.y, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+
+    function loop(timestamp) {
+      const dt = Math.min(0.033, (timestamp - state.last) / 1000 || 0);
+      state.last = timestamp;
+      step(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    function togglePause() {
+      if (!state.running) return;
+      state.paused = !state.paused;
+      pauseButton.textContent = state.paused ? ">" : "II";
+      message.textContent = "游戏已暂停。";
+      startButton.textContent = "继续游戏";
+      overlay.classList.toggle("hidden", !state.paused);
+    }
+
+    startButton.addEventListener("click", () => {
+      if (state.paused) {
+        togglePause();
+      } else {
+        reset();
+      }
+    });
+
+    pauseButton.addEventListener("click", togglePause);
+
+    window.addEventListener("keydown", event => {
+      const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", " ", "w", "a", "s", "d"].includes(key)) {
+        event.preventDefault();
+      }
+      if (key === " ") {
+        togglePause();
+      } else {
+        state.keys.add(key);
+      }
+    });
+
+    window.addEventListener("keyup", event => {
+      const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+      state.keys.delete(key);
+    });
+
+    canvas.addEventListener("pointerdown", event => {
+      canvas.setPointerCapture(event.pointerId);
+      state.pointer = { x: event.offsetX, y: event.offsetY };
+      if (!state.running && overlay.classList.contains("hidden") === false) reset();
+    });
+
+    canvas.addEventListener("pointermove", event => {
+      if (event.buttons || event.pointerType === "touch") {
+        state.pointer = { x: event.offsetX, y: event.offsetY };
+      }
+    });
+
+    canvas.addEventListener("pointerup", () => {
+      state.pointer = null;
+    });
+
+    window.addEventListener("resize", resize);
+    resize();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
+

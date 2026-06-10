@@ -1,0 +1,27 @@
+﻿# --- 系统 & 临时文件 ---
+Thumbs.db
+Desktop.ini
+.BIN/
+*.tmp
+*.temp
+~$*
+
+# --- 编辑器 ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# --- Node ---
+node_modules/
+*.log
+
+# --- 项目特定 ---
+01_全局复盘_踩坑日志.md
